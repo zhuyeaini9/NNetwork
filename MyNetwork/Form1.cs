@@ -19,48 +19,6 @@ namespace MyNetwork
         }
     }
 
-    public class CNode
-    {
-        public double mWX;
-        public double mWXActived;
-        public List<double> mWParam = new List<double>();
-        public double mBParam;
-        public CNode(int inputNum)
-        {
-            Random r = new Random();
-            for (int i = 0; i < inputNum; i++)
-            {
-                mWParam.Add(r.NextDouble());
-            }
-            mBParam = r.NextDouble();
-        }
-    }
-    public class CNNetwork
-    {
-        public Dictionary<int, List<CNode>> mLayerNodes = new Dictionary<int, List<CNode>>();
-        public CNNetwork(int inputNum,int layerNum,params int[] layerNodeNum)
-        {
-            if (layerNum < 2)
-                throw new Exception("layerNum must >=2");
-            if (layerNum != layerNodeNum.Length)
-                throw new Exception("layerNum must == layerNodeNum.Length");
-
-            for(int i=0;i<layerNum;i++)
-            {
-                List<CNode> ns = new List<CNode>();
-                mLayerNodes[i] = ns;
-                int iNum = 0;
-                if (i == 0)
-                    iNum = inputNum;
-                else
-                    iNum = layerNodeNum[i-1];
-                for (int j = 0; j < layerNodeNum[i]; j++)
-                {
-                    ns.Add(new CNode(iNum));
-                }
-            }
-        }
-    }
     public class CHelp
     {
         public static double getActiveVal(double z,ACTIVE_FUNCTION af)
@@ -137,20 +95,38 @@ namespace MyNetwork
                 throw new Exception("input count != layer input count");
 
             mZ = mW * input + mB;
+            mA = CHelp.getActiveValMatrix(mZ, mAFuction);
         }
     }
-    public class CNNetwork2
+    public class CNNetwork
     {
-        public CNNetwork2(int inputNum, int layerNum, params int[] layerNodeNum)
+        public List<CNNLayer> mNNlayers = new List<CNNLayer>();
+        public CNNetwork(int inputNum,params CNNLayer[] layer)
         {
-            if (inputNum < 1)
-                throw new Exception("inputNum must >=2");
-            if (layerNum < 2)
-                throw new Exception("layerNum must >=2");
-            if (layerNum != layerNodeNum.Length)
-                throw new Exception("layerNum must == layerNodeNum.Length");
-
-            
+            foreach(var v in layer)
+            {
+                mNNlayers.Add(v);
+            }
+            for(int i=0;i<mNNlayers.Count;i++)
+            {
+                if (i == 0)
+                    mNNlayers[i].init(inputNum);
+                mNNlayers[i].init(mNNlayers[i - 1].mNodeNum);
+            }
+        }
+        public void cal(Matrix<double> input)
+        {
+            if(mNNlayers.Count>0)
+                _cal(input, 0);
+        }
+        void _cal(Matrix<double> i,int layIndex)
+        {
+            if (layIndex >= mNNlayers.Count)
+                return;
+            CNNLayer lay = mNNlayers[layIndex];
+            lay.cal(i);
+            layIndex++;
+            _cal(lay.mA, layIndex);
         }
     }
 }
