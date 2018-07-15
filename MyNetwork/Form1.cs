@@ -28,6 +28,10 @@ namespace MyNetwork
             {
                 if(af == ACTIVE_FUNCTION.RELU)
                 {
+                    /*
+                    a = g(z) = max(0,z)
+                    dz = 0/1
+                    */
                     if (z > 0)
                         re = z;
                     else
@@ -35,6 +39,10 @@ namespace MyNetwork
                 }
                 if(af == ACTIVE_FUNCTION.LOGI)
                 {
+                    /*
+                    a = g(z) = 1/(1+e(-z))
+                    dz = a(1-a)
+                    */
                     re = 1 / (1 + Math.Exp(-z));
                 }
             }
@@ -98,23 +106,62 @@ namespace MyNetwork
             mA = CHelp.getActiveValMatrix(mZ, mAFuction);
         }
     }
+    public class CInputOutputSample
+    {
+        public Matrix<double> mIn;
+        public Matrix<double> mOut;
+        CInputOutputSample(Matrix<double> i,Matrix<double> j)
+        {
+            if (i.ColumnCount != j.ColumnCount)
+                throw new Exception("输入输出样本数量不匹配");
+            mIn = i;
+            mOut = j;
+        }
+        public int getInputNum()
+        {
+            return mIn.RowCount;
+        }
+        public int getOutputNum()
+        {
+            return mOut.RowCount;
+        }
+        public int getSampleCount()
+        {
+            return mIn.ColumnCount;
+        }
+        public Vector<double> getInSample(int index)
+        {
+            return mIn.Column(index);
+        }
+        public Vector<double> getOutSample(int index)
+        {
+            return mOut.Column(index);
+        }
+    }
     public class CNNetwork
     {
+        /*
+        L(a,y)=-(y*log(a)+(1-y)*log(1-a))
+        da = -y/a+(1-y)/(1-a)
+        */
+        public double mCurDeviation = double.MaxValue;
+        public CInputOutputSample mInputOutputSample;
         public List<CNNLayer> mNNlayers = new List<CNNLayer>();
-        public CNNetwork(int inputNum,params CNNLayer[] layer)
+        public CNNetwork(CInputOutputSample samples, params CNNLayer[] layer)
         {
-            foreach(var v in layer)
+            mInputOutputSample = samples;
+            foreach (var v in layer)
             {
                 mNNlayers.Add(v);
             }
             for(int i=0;i<mNNlayers.Count;i++)
             {
                 if (i == 0)
-                    mNNlayers[i].init(inputNum);
+                    mNNlayers[i].init(samples.getInputNum());
                 mNNlayers[i].init(mNNlayers[i - 1].mNodeNum);
             }
         }
-        public void cal(Matrix<double> input)
+        void cal(Matrix<double> input)
         {
             if(mNNlayers.Count>0)
                 _cal(input, 0);
@@ -127,6 +174,28 @@ namespace MyNetwork
             lay.cal(i);
             layIndex++;
             _cal(lay.mA, layIndex);
+        }
+        bool checkDeviation()
+        {
+            bool re = true;
+            mNNlayers[mNNlayers.Count-1].mA
+            return re;
+        }
+        void update()
+        {
+            for(int i=0;i<mInputOutputSample.getSampleCount();i++)
+            {
+                Vector<double> inSample = mInputOutputSample.getInSample(i);
+                Vector<double> outSample = mInputOutputSample.getOutSample(i);
+                Matrix<double> inMatrix = Matrix<double>.Build.DenseOfColumnVectors(inSample);
+                Matrix<double> outMatrix = Matrix<double>.Build.DenseOfColumnVectors(outSample);
+                //计算正向误差
+                cal(inMatrix);
+
+                //计算反向更新参数
+
+                //更新误差是否更小
+            }           
         }
     }
 }
