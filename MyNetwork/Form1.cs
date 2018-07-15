@@ -73,6 +73,11 @@ namespace MyNetwork
         TAN,//-1~1
         RELU//max(0,z)
     }
+    public enum DEVIATION
+    {
+        LOGI,//0,1
+        SOFTMAX
+    }
     public class CNNLayer
     {
         public ACTIVE_FUNCTION mAFuction;
@@ -141,8 +146,12 @@ namespace MyNetwork
     public class CNNetwork
     {
         /*
+        0，1误差函数 log:loge
         L(a,y)=-(y*log(a)+(1-y)*log(1-a))
         da = -y/a+(1-y)/(1-a)
+
+        SOFTMAX误差函数 ln:loge lg:log10
+        L(a,y) = -sum(ylna)
         */
         public double mCurDeviation = double.MaxValue;
         public CInputOutputSample mInputOutputSample;
@@ -178,7 +187,6 @@ namespace MyNetwork
         bool checkDeviation()
         {
             bool re = true;
-            mNNlayers[mNNlayers.Count-1].mA
             return re;
         }
         void update()
