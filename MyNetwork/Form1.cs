@@ -87,6 +87,7 @@ namespace MyNetwork
         public Matrix<double> mZ;
         public Matrix<double> mW;
         public Matrix<double> mB;
+        public Matrix<double> mDW;
         public CNNLayer(int nodeNum,ACTIVE_FUNCTION af = ACTIVE_FUNCTION.RELU)
         {
             mAFuction = af;
@@ -109,6 +110,10 @@ namespace MyNetwork
 
             mZ = mW * input + mB;
             mA = CHelp.getActiveValMatrix(mZ, mAFuction);
+        }
+        public double getActiveDerivative()
+        {
+            return 0;
         }
     }
     public class CInputOutputSample
@@ -153,7 +158,7 @@ namespace MyNetwork
         SOFTMAX误差函数 ln:loge lg:log10
         L(a,y) = -sum(ylna)
         */
-        public double mCurDeviation = double.MaxValue;
+        public double mU = 0.01;
         public CInputOutputSample mInputOutputSample;
         public List<CNNLayer> mNNlayers = new List<CNNLayer>();
         public CNNetwork(CInputOutputSample samples, params CNNLayer[] layer)
@@ -170,6 +175,25 @@ namespace MyNetwork
                 mNNlayers[i].init(mNNlayers[i - 1].mNodeNum);
             }
         }
+        void reserveCal()
+        {
+            for(int i=mNNlayers.Count-1;i>=0;i--)
+            {
+                CNNLayer lay = mNNlayers[i];
+                if (mNNlayers.Count-1 == i)
+                {
+                    lay.mDW = Matrix<double>.Build.Dense(lay.mNodeNum, 1, getDeviationDerivative() * lay.getActiveDerivative());
+                }
+                else
+                {
+                    CNNLayer afterLay = mNNlayers[i + 1];
+                    lay.mDW = afterLay.mDW * afterLay.mW * lay.getActiveDerivative();
+                }
+            }
+        }
+        double getDeviationDerivative()
+        { return 0; }
+
         void cal(Matrix<double> input)
         {
             if(mNNlayers.Count>0)
@@ -199,11 +223,38 @@ namespace MyNetwork
                 Matrix<double> outMatrix = Matrix<double>.Build.DenseOfColumnVectors(outSample);
                 //计算正向误差
                 cal(inMatrix);
-
-                //计算反向更新参数
-
-                //更新误差是否更小
+                //计算反向
+                reserveCal();
+                //更新WB参数
+                updateWB(inMatrix);
+                if(!checkDeviation())
+                {
+                    //过拟合了
+                    continue;
+                }
             }           
+        }
+
+        void updateWB(Matrix<double> inSample)
+        {
+            for(int i=0;i<mNNlayers.Count;i++)
+            {
+                CNNLayer lay = mNNlayers[i];
+                Matrix<double> preIn;
+                if(i==0)
+                {
+                    preIn = inSample;
+                }
+                else
+                {
+                    preIn = lay.mA;
+                }
+                Matrix<double> dw = preIn * lay.mDW;
+                Matrix<double> db = lay.mDW;
+
+                lay.mW -= mU * dw;
+                lay.mB -= mU * db;
+            }
         }
     }
 }
